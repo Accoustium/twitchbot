@@ -1,4 +1,5 @@
 import os
+import sqlite3
 import socket
 from dotenv import load_dotenv
 
@@ -10,27 +11,34 @@ PORT = os.getenv('PORT')
 TOKEN = os.getenv('TOKEN')
 NICK = os.getenv('NICK')
 CHANNEL = os.getenv('CHANNEL')
+DATABASE = os.getenv('DATABASE')
 PING = "PING :tmi.twitch.tv\n"
 
 
 class TwitchBot:
-    def __init__(self, host=HOST, port=PORT, token=TOKEN, nick=NICK, channel=CHANNEL):
+    def __init__(self, host=HOST, port=PORT, token=TOKEN, nick=NICK, channel=CHANNEL, database=DATABASE):
         self.s = socket.socket()
         self.host = host
         self.port = port
         self.token = token
         self.nick = nick
         self.channel = channel
+        self.database = database
 
     def __enter__(self):
         self.authenticate()
+        self.load_commands()
 
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.s.close()
+        self.upload_commands()
 
         return self
+
+    def __load_command(self, command: str, response: str):
+        self.__dict__[f"command_{command}"] = response
 
     def pong(self):
         self.s.send(f"PONG :tmi.twitch.tv\r\n".encode('utf-8'))
@@ -64,3 +72,9 @@ class TwitchBot:
             channel_ = self.channel
 
         self.s.send(f"NOTICE #{channel_} :{notice}\r\n".encode('utf-8'))
+
+    def load_commands(self):
+        pass
+
+    def upload_commands(self):
+        pass

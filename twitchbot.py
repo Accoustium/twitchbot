@@ -10,7 +10,7 @@ PORT = os.getenv('PORT')
 TOKEN = os.getenv('TOKEN')
 NICK = os.getenv('NICK')
 CHANNEL = os.getenv('CHANNEL')
-PING = [b'', b'']
+PING = "PING :tmi.twitch.tv\n"
 
 
 class TwitchBot:
@@ -22,10 +22,20 @@ class TwitchBot:
         self.nick = nick
         self.channel = channel
 
-    def __pong__(self):
+    def __enter__(self):
+        self.authenticate()
+
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.s.close()
+
+        return self
+
+    def pong(self):
         self.s.send(f"PONG :tmi.twitch.tv\r\n".encode('utf-8'))
 
-    def connect(self):
+    def authenticate(self):
         self.s.connect((self.host, int(self.port)))
         self.s.send(f"PASS {self.token}\r\n".encode('utf-8'))
         self.s.send(f"NICK {self.nick}\r\n".encode('utf-8'))
@@ -45,6 +55,12 @@ class TwitchBot:
 
     def read_messages(self):
         response = self.s.recv(1024).split(b'\r\n')
-        diff = "utf-8 " * len(response)
+        diff = "utf-8 " * len(response[:-1])
 
-        return '\n'.join(list(map(str, response, diff.split(' '))))
+        return '\n'.join(list(map(str, response[:-1], diff.split(' '))))
+
+    def notice_channel(self, notice, channel_=None):
+        if not channel_:
+            channel_ = self.channel
+
+        self.s.send(f"NOTICE #{channel_} :{notice}\r\n".encode('utf-8'))

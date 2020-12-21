@@ -10,6 +10,7 @@ PORT = os.getenv('PORT')
 TOKEN = os.getenv('TOKEN')
 NICK = os.getenv('NICK')
 CHANNEL = os.getenv('CHANNEL')
+PING = [b'', b'']
 
 
 class TwitchBot:

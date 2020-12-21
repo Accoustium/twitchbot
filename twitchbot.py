@@ -73,6 +73,23 @@ class TwitchBot:
 
         self.s.send(f"NOTICE #{channel_} :{notice}\r\n".encode('utf-8'))
 
+    def read_command(self, message_line: str):
+        if "PRIVMSG" not in message_line:
+            return
+
+        message = ":".join(message_line.split(':')[2:])
+        command = message.split(' ')[0]
+
+        if '!' in command and f"command_{command[1:].strip()}" in self.__dict__.keys():
+            if command[1:].strip() == "add":
+                self.add_command(message.split(' ')[1], " ".join(message.split(' ')[2:]).strip())
+                return
+
+            self.send_message(self.__dict__[f"command_{command[1:].split()}"])
+
+    def add_command(self, command: str, response: str):
+        self.__load_command(command, response)
+
     def load_commands(self):
         pass
 

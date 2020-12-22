@@ -1,97 +1,36 @@
 import os
-import sqlalchemy
-import socket
 from dotenv import load_dotenv
+from twitchio.ext import commands
+import twitchio
 
 
 dotenv_path = os.path.join(os.path.dirname('__file__'), '.env')
 load_dotenv(dotenv_path)
-HOST = os.getenv('HOST')
-PORT = os.getenv('PORT')
 TOKEN = os.getenv('TOKEN')
 NICK = os.getenv('NICK')
 CHANNEL = os.getenv('CHANNEL')
-DATABASE = os.getenv('DATABASE')
-PING = "PING :tmi.twitch.tv\n"
 
 
-class TwitchBot:
-    def __init__(self, host=HOST, port=PORT, token=TOKEN, nick=NICK, channel=CHANNEL, database=DATABASE):
-        self.s = socket.socket()
-        self.host = host
-        self.port = port
-        self.token = token
-        self.nick = nick
-        self.channel = channel
-        self.database = database
+class TwitchBot(commands.Bot):
+    def __init__(self):
+        super().__init__(irc_token=TOKEN, nick=NICK, prefix='!',
+                         initial_channels=[CHANNEL])
 
-    def __enter__(self):
-        self.authenticate()
-        self.load_commands()
+    async def event_ready(self):
+        print(f'Ready | {self.nick}')
 
-        return self
+    async def event_message(self, message):
+        print(message.content)
+        await self.handle_commands(message)
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.s.close()
-        self.upload_commands()
+    @commands.command(name='test')
+    async def my_command(self, ctx: twitchio.Context):
+        await ctx.send(f"Hello {ctx.author.name}")
 
-        return self
+    @commands.command(name='hello')
+    async def hello_command(self, ctx: twitchio.Context):
+        await ctx.send(f"Hello {ctx.author.name}!")
 
-    def __load_command(self, command: str, response: str):
-        self.__dict__[f"command_{command}"] = response
 
-    def pong(self):
-        self.s.send(f"PONG :tmi.twitch.tv\r\n".encode('utf-8'))
-
-    def authenticate(self):
-        self.s.connect((self.host, int(self.port)))
-        self.s.send(f"PASS {self.token}\r\n".encode('utf-8'))
-        self.s.send(f"NICK {self.nick}\r\n".encode('utf-8'))
-        print(self.read_messages())
-
-    def join_channel(self, channel_=None):
-        if channel_:
-            self.s.send(f"JOIN #{channel_}\r\n".encode('utf-8'))
-        else:
-            self.s.send(f"JOIN #{self.channel}\r\n".encode('utf-8'))
-
-    def send_message(self, message: str, channel_=None):
-        if not channel_:
-            channel_ = self.channel
-
-        self.s.send(f"PRIVMSG #{channel_} :{message}\r\n".encode('utf-8'))
-
-    def read_messages(self):
-        response = self.s.recv(1024).split(b'\r\n')
-        diff = "utf-8 " * len(response[:-1])
-
-        return '\n'.join(list(map(str, response[:-1], diff.split(' '))))
-
-    def notice_channel(self, notice, channel_=None):
-        if not channel_:
-            channel_ = self.channel
-
-        self.s.send(f"NOTICE #{channel_} :{notice}\r\n".encode('utf-8'))
-
-    def read_command(self, message_line: str):
-        if "PRIVMSG" not in message_line:
-            return
-
-        message = ":".join(message_line.split(':')[2:])
-        command = message.split(' ')[0]
-
-        if '!' in command and f"command_{command[1:].strip()}" in self.__dict__.keys():
-            if command[1:].strip() == "add":
-                self.add_command(message.split(' ')[1], " ".join(message.split(' ')[2:]).strip())
-                return
-
-            self.send_message(self.__dict__[f"command_{command[1:].split()}"])
-
-    def add_command(self, command: str, response: str):
-        self.__load_command(command, response)
-
-    def load_commands(self):
-        pass
-
-    def upload_commands(self):
-        pass
+twitch = TwitchBot()
+twitch.run()
